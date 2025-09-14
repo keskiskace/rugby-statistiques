@@ -33,6 +33,13 @@ choice_club = st.selectbox("Choisir un club (optionnel)", ["Aucun"] + clubs_disp
 if choice_club != "Aucun":
     df_filtered = df_filtered[df_filtered['club'] == choice_club]
 
+# Temps de jeu minimum (nouveau filtre)
+min_temps_options = [0, 10, 20, 30, 40, 50, 60, 70, 80]
+min_temps = st.selectbox("Filtrer par temps de jeu minimum (minutes)", min_temps_options, index=0)
+
+if "temps_jeu_min" in df_filtered.columns:
+    df_filtered = df_filtered[df_filtered["temps_jeu_min"] >= min_temps]
+
 # Statistique
 numeric_cols = df_filtered.select_dtypes(include=[np.number]).columns.tolist()
 exclude_cols = ["player_id", "id"]
@@ -68,3 +75,4 @@ if not df_filtered.empty and choice_stat:
                            mime="image/png")
 else:
     st.info("Aucune donnée pour ce filtre.")
+
