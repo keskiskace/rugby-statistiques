@@ -55,28 +55,47 @@ if 'saison' in df_players.columns and len(selected_saisons) > 1:
 else:
     df_players['display_name'] = df_players['nom'].astype(str)
 
-# 2) division
+# 2) Filtre journée (optionnel)
+if "journée" in df.columns:
+    journees_dispo = sorted(df.loc[df['saison'].isin(selected_saisons), "journée"].dropna().unique().tolist())
+    choice_journee = st.selectbox("5) Choisir une journée", ["Dernière disponible"] + [f"J{j}" for j in journees_dispo])
+
+    if choice_journee == "Dernière disponible":
+        # garder uniquement la dernière journée par saison+joueur
+        df_players = df_players.loc[
+            df_players.groupby(["saison", "nom"])["journée"].transform("max") == df_players["journée"]
+        ]
+    else:
+        journee_num = int(choice_journee[1:])
+        df_players = df_players[
+            ((df_players["saison"].isin(selected_saisons)) & (df_players["journée"] == journee_num))
+            | ((~df_players["saison"].isin(selected_saisons)) & (
+                df_players.groupby(["saison", "nom"])["journée"].transform("max") == df_players["journée"]
+            ))
+        ]
+
+# 3) division
 if "division" in df_players.columns:
     divisions_dispo = sorted(df_players['division'].dropna().unique().tolist())
     selected_div = st.multiselect("2) Choisir division(s) (optionnel)", divisions_dispo, default=st.session_state.get('players_divisions', []), key='players_divisions')
     if selected_div:
         df_players = df_players[df_players['division'].isin(selected_div)]
 
-# 3) club
+# 4) club
 if "club" in df_players.columns:
     clubs_dispo = sorted(df_players['club'].dropna().unique().tolist())
     selected_clubs = st.multiselect("3) Choisir club(s) (optionnel)", clubs_dispo, default=st.session_state.get('players_clubs', []), key='players_clubs')
     if selected_clubs:
         df_players = df_players[df_players['club'].isin(selected_clubs)]
 
-# 4) poste
+# 5) poste
 if "poste" in df_players.columns:
     postes_dispo = sorted(df_players['poste'].dropna().unique().tolist())
     selected_postes = st.multiselect("4) Choisir poste(s) (optionnel)", postes_dispo, default=st.session_state.get('players_postes', []), key='players_postes')
     if selected_postes:
         df_players = df_players[df_players['poste'].isin(selected_postes)]
 
-# 5) joueurs disponibles (aucune sélection par défaut)
+# 6) joueurs disponibles (aucune sélection par défaut)
 player_options = df_players['display_name'].sort_values().unique().tolist()
 if player_options:
     # Si tu as une ancienne valeur dans le session_state et que tu veux l'effacer au chargement,
