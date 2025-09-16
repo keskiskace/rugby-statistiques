@@ -7,7 +7,7 @@ import requests
 import matplotlib.pyplot as plt
 import plotly.graph_objects as go
 
-DB_FILE = "top14_prod2_25_26_players_clubs.db"
+DB_FILE = "rugbystat.db"
 IMAGES_DIR = "images"
 FALLBACK_IMAGE = os.path.join(IMAGES_DIR, "no_player.webp")
 
@@ -212,3 +212,4 @@ def make_scatter_radar(radar_df: pd.DataFrame, selected_stats: list):
                       xaxis=dict(showgrid=False, zeroline=False, visible=False),
                       yaxis=dict(showgrid=False, zeroline=False, visible=False))
     return fig
+
