@@ -40,7 +40,25 @@ if selected_saisons:
 else:
     df_clubs = clubs_df.copy()
 
-# 2) Division
+# 2) Filtre journée (optionnel)
+if "journée" in clubs_df.columns:
+    journees_dispo = sorted(clubs_df.loc[clubs_df['saison'].isin(selected_saisons), "journée"].dropna().unique().tolist())
+    choice_journee = st.selectbox("3) Choisir une journée", ["Dernière disponible"] + [f"J{j}" for j in journees_dispo])
+
+    if choice_journee == "Dernière disponible":
+        df_clubs = df_clubs.loc[
+            df_clubs.groupby(["saison", "club"])["journée"].transform("max") == df_clubs["journée"]
+        ]
+    else:
+        journee_num = int(choice_journee[1:])
+        df_clubs = df_clubs[
+            ((df_clubs["saison"].isin(selected_saisons)) & (df_clubs["journée"] == journee_num))
+            | ((~df_clubs["saison"].isin(selected_saisons)) & (
+                df_clubs.groupby(["saison", "club"])["journée"].transform("max") == df_clubs["journée"]
+            ))
+        ]
+
+# 3) Division
 if "division" in df_clubs.columns:
     divisions_dispo = sorted(df_clubs['division'].dropna().unique())
     selected_div = st.multiselect(
