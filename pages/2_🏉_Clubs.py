@@ -70,7 +70,7 @@ if "division" in df_clubs.columns:
     if selected_div:
         df_clubs = df_clubs[df_clubs['division'].isin(selected_div)]
 
-# 3) Clubs
+# 4) Clubs
 club_options = df_clubs['club'].sort_values().unique().tolist()
 if club_options:
     selected_names = st.multiselect(
