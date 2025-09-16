@@ -174,7 +174,7 @@ def make_scatter_radar(radar_df: pd.DataFrame, selected_stats: list):
                            text=stat, showarrow=False,
                            font=dict(size=12, color="black"))
 
-    # polygones par joueur
+    # polygones par joueur/club
     for idx, (_, row) in enumerate(radar_df.iterrows()):
         r_values = [row.get(stat, np.nan) for stat in selected_stats]
         r_values = [np.nan if (not pd.notna(v)) else float(v) for v in r_values]
@@ -187,29 +187,34 @@ def make_scatter_radar(radar_df: pd.DataFrame, selected_stats: list):
              for v, t in zip(r_values, theta)]
 
         color = color_palette[idx % len(color_palette)]
+        label = row.get("Club") or row.get("Joueur") or f"Série {idx+1}"
+
+        # Polygone rempli (sans légende)
         fig.add_trace(go.Scatter(x=x, y=y, mode="lines",
-                                 name=row.get("Joueur", ""),
                                  fill="toself", line=dict(color=color),
                                  fillcolor=color, opacity=0.25,
-                                 hoverinfo="skip", showlegend=False))
+                                 showlegend=False, hoverinfo="skip"))
 
+        # Courbe avec légende + hover
         hover_texts = [
-            f"{row.get('Joueur','')}<br>{stat}: "
+            f"{label}<br>{stat}: "
             f"{'' if (val is np.nan or not np.isfinite(val)) else round(val,1)}"
             for stat, val in zip(selected_stats, r_values[:-1])
         ]
         hover_texts.append(hover_texts[0])
 
         fig.add_trace(go.Scatter(x=x, y=y, mode="markers+lines",
-                                 name=row.get("Joueur", ""),
+                                 name=label,  # ✅ affiché dans la légende
                                  line=dict(color=color),
-                                 marker=dict(color=color, size=8),
+                                 marker=dict(color=color, size=6),
                                  text=hover_texts,
                                  hovertemplate="%{text}<extra></extra>"))
 
     fig.update_layout(width=800, height=600, hovermode="closest",
                       dragmode="pan",
                       xaxis=dict(showgrid=False, zeroline=False, visible=False),
-                      yaxis=dict(showgrid=False, zeroline=False, visible=False))
+                      yaxis=dict(showgrid=False, zeroline=False, visible=False),
+                      showlegend=True)
     return fig
+
 
