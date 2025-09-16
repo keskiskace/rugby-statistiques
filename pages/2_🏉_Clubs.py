@@ -120,19 +120,26 @@ if not selected_clubs_df.empty:
     if selected_stats:
         radar_data = []
         for _, club in selected_clubs_df.iterrows():
-            entry = {"Joueur": club.get("club", "")}
+            # Création du label unique avec saison + journée
+            label = f"{club.get('club','')} S{str(club.get('saison',''))[-2:]} J{club.get('journée','')}"
+            
+            entry = {"Club": label}
             for stat in selected_stats:
                 entry[stat] = club.get(stat, np.nan)
             radar_data.append(entry)
 
         radar_df = pd.DataFrame(radar_data)
+
+        # Radar
         fig = make_scatter_radar(radar_df, selected_stats)
         st.plotly_chart(fig, use_container_width=True, config={"scrollZoom": True, "displaylogo": False})
 
+        # Tableau comparatif
         st.subheader("📊 Tableau comparatif des clubs")
-        table_df = radar_df.set_index("Joueur").T
+        table_df = radar_df.set_index("Club").T
         st.dataframe(table_df)
 
+        # Téléchargements
         st.download_button("⬇️ Télécharger en CSV", table_df.to_csv().encode("utf-8"),
                            file_name="comparatif_clubs.csv", mime="text/csv")
 
