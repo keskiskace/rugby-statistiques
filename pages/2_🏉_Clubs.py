@@ -1,4 +1,4 @@
-# clubs_app.py
+# 2_🏉_Clubs.py
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -22,6 +22,30 @@ def reset_clubs_filters():
 
 st.sidebar.button("Réinitialiser les filtres Clubs", on_click=reset_clubs_filters)
 
+# ===== helper : garder la dernière journée par saison+club =====
+def keep_last_journee_per_club(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Renvoie un DataFrame contenant, pour chaque (saison, club), la ligne correspondant
+    à la dernière journée connue (max 'journée') — ou la ligne unique si 'journée' est tout NaN.
+    Méthode : tri par ['saison','club','journée'] (NaN en first), puis groupby.last().
+    """
+    if "journée" not in df.columns:
+        # pas de colonne journée : on renvoie tel quel
+        return df.copy()
+
+    # On crée une copie et on s'assure que 'journée' est numérique (NaN si non convertible)
+    temp = df.copy()
+    temp["journée"] = pd.to_numeric(temp["journée"], errors="coerce")
+
+    # Trier par saison, club, journée (NaN first pour que last() prenne le max numérique si existant)
+    temp_sorted = temp.sort_values(by=["saison", "club", "journée"], na_position="first", kind="stable")
+
+    # Groupby last() : après le tri, last() renverra la ligne avec la plus grande 'journée' (ou la ligne NaN si pas d'autres)
+    latest = temp_sorted.groupby(["saison", "club"], as_index=False).last()
+
+    # Garder l'ordre naturel (optional)
+    return latest
+
 # ====== FILTRES ======
 st.subheader("🎛️ Filtres")
 
@@ -35,30 +59,16 @@ selected_saisons = st.multiselect(
     key='clubs_saisons'
 )
 
+# Filtrer par saisons choisies (sinon tout)
 if selected_saisons:
     df_clubs = clubs_df[clubs_df['saison'].isin(selected_saisons)].copy()
 else:
     df_clubs = clubs_df.copy()
 
-# 2) Filtre journée (optionnel)
-if "journée" in clubs_df.columns:
-    journees_dispo = sorted(clubs_df.loc[clubs_df['saison'].isin(selected_saisons), "journée"].dropna().unique().tolist())
-    choice_journee = st.selectbox("3) Choisir une journée", ["Dernière disponible"] + [f"J{j}" for j in journees_dispo])
+# Appliquer la logique : ne garder que la dernière journée disponible par saison+club
+df_clubs = keep_last_journee_per_club(df_clubs)
 
-    if choice_journee == "Dernière disponible":
-        df_clubs = df_clubs.loc[
-            df_clubs.groupby(["saison", "club"])["journée"].transform("max") == df_clubs["journée"]
-        ]
-    else:
-        journee_num = int(choice_journee[1:])
-        df_clubs = df_clubs[
-            ((df_clubs["saison"].isin(selected_saisons)) & (df_clubs["journée"] == journee_num))
-            | ((~df_clubs["saison"].isin(selected_saisons)) & (
-                df_clubs.groupby(["saison", "club"])["journée"].transform("max") == df_clubs["journée"]
-            ))
-        ]
-
-# 3) Division
+# 2) Division
 if "division" in df_clubs.columns:
     divisions_dispo = sorted(df_clubs['division'].dropna().unique())
     selected_div = st.multiselect(
@@ -70,13 +80,16 @@ if "division" in df_clubs.columns:
     if selected_div:
         df_clubs = df_clubs[df_clubs['division'].isin(selected_div)]
 
-# 4) Clubs
+# 3) Clubs
+# sécuriser la valeur par défaut face au session_state (retirer les noms non présents)
 club_options = df_clubs['club'].sort_values().unique().tolist()
+default_names = [c for c in st.session_state.get('clubs_names', []) if c in club_options]
+
 if club_options:
     selected_names = st.multiselect(
         "3) Choisir club(s)",
         club_options,
-        default=st.session_state.get('clubs_names', []),
+        default=default_names,
         key='clubs_names'
     )
     selected_clubs_df = df_clubs[df_clubs['club'].isin(selected_names)].copy()
@@ -96,7 +109,7 @@ if not df_clubs.empty:
 
 extra_clubs_df = pd.DataFrame(extra_clubs) if extra_clubs else pd.DataFrame()
 
-# Fusion si clubs types sélectionnés
+# Fusion si clubs types sélectionnés (on fusionne avec df_clubs *original filtré par saison/division*)
 if not extra_clubs_df.empty:
     clubs_extended = pd.concat([df_clubs, extra_clubs_df], ignore_index=True)
 else:
@@ -106,23 +119,33 @@ else:
 if not selected_clubs_df.empty:
     st.subheader("📊 Comparaison des Clubs")
 
+    # préparer colonnes statistiques : toutes les colonnes numériques, exclusion configurable
     numeric_cols = clubs_extended.select_dtypes(include=[np.number]).columns.tolist()
-    exclude_cols = ["classement"]
+    exclude_cols = []  # <---- si tu veux exclure certaines colonnes, remplis cette liste
     stat_cols = [c for c in numeric_cols if c not in exclude_cols]
 
     selected_stats = st.multiselect(
         "Choisir statistiques pour le radar",
         options=stat_cols,
-        default=st.session_state.get('clubs_stats', stat_cols[:5] if len(stat_cols) > 5 else stat_cols),
+        default=st.session_state.get('clubs_stats', stat_cols[:6] if len(stat_cols) > 6 else stat_cols),
         key='clubs_stats'
     )
 
     if selected_stats:
         radar_data = []
         for _, club in selected_clubs_df.iterrows():
-            # Création du label unique avec saison + journée
-            label = f"{club.get('club','')} S{str(club.get('saison',''))[-2:]} J{club.get('journée','')}"
-            
+            # Création du label unique avec saison (2 derniers chiffres) + journée (si présente)
+            saison_val = str(club.get('saison', ''))
+            saison_suffix = saison_val[-2:] if saison_val else ""
+            journee_val = club.get('journée')
+            journee_part = f" J{int(journee_val)}" if pd.notna(journee_val) and str(journee_val).strip() != "" else ""
+
+            label = f"{club.get('club','')}"
+            if saison_suffix:
+                label += f" S{saison_suffix}"
+            if journee_part:
+                label += journee_part
+
             entry = {"Club": label}
             for stat in selected_stats:
                 entry[stat] = club.get(stat, np.nan)
@@ -136,6 +159,7 @@ if not selected_clubs_df.empty:
 
         # Tableau comparatif
         st.subheader("📊 Tableau comparatif des clubs")
+        # transposer pour avoir colonnes = clubs (labels uniques)
         table_df = radar_df.set_index("Club").T
         st.dataframe(table_df)
 
