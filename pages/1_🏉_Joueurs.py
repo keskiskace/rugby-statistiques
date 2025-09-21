@@ -137,18 +137,26 @@ if not selected_players.empty:
         if "Joueur type" not in str(nom_aff):
             photo_to_show = get_image_safe(joueur)
             st.image(photo_to_show, caption=joueur.get('club', ''), width=150)
+
+            # Affichage des infos sans ratio poids/taille
             st.json({
                 "Club": joueur.get('club', 'N/A'),
                 "Poste": joueur.get('poste', 'N/A'),
                 "Âge": joueur.get('age', 'N/A'),
                 "Taille (cm)": joueur.get('taille_cm', 'N/A'),
                 "Poids (kg)": joueur.get('poids_kg', 'N/A'),
-                "Ratio poids/taille": joueur.get('ratio_poids_taille', 'N/A')
             })
+
+            # Bouton vers la fiche LNR
+            url = joueur.get("url", None)
+            if url and isinstance(url, str) and url.startswith("http"):
+                st.link_button("🔗 Voir fiche LNR", url)
+
         else:
             st.info("📊 Joueur type (moyenne des stats).")
 else:
     st.info("Aucun joueur sélectionné.")
+
 
 # STATISTIQUES / RADAR
 df_extended = pd.concat([df_players, extra_df], ignore_index=True) if not extra_df.empty else df_players.copy()
