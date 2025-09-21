@@ -121,7 +121,7 @@ if not selected_clubs_df.empty:
 
     # préparer colonnes statistiques : toutes les colonnes numériques, exclusion configurable
     numeric_cols = clubs_extended.select_dtypes(include=[np.number]).columns.tolist()
-    exclude_cols = ["journée"]  # <---- si tu veux exclure certaines colonnes, remplis cette liste
+    exclude_cols = ["journée","matchs_joués"]  # <---- si tu veux exclure certaines colonnes, remplis cette liste
     stat_cols = [c for c in numeric_cols if c not in exclude_cols]
 
     selected_stats = st.multiselect(
