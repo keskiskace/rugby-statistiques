@@ -42,7 +42,7 @@ if "temps_jeu_min" in df_filtered.columns:
 
 # Statistique
 numeric_cols = df_filtered.select_dtypes(include=[np.number]).columns.tolist()
-exclude_cols = ["player_id", "id"]
+exclude_cols = ["player_id", "id","journée"]
 stat_cols = [c for c in numeric_cols if c not in exclude_cols]
 
 if not stat_cols:
@@ -75,4 +75,5 @@ if not df_filtered.empty and choice_stat:
                            mime="image/png")
 else:
     st.info("Aucune donnée pour ce filtre.")
+
 
