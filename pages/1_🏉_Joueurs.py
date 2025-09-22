@@ -165,7 +165,7 @@ df_extended = pd.concat([df_players, extra_df], ignore_index=True) if not extra_
 numeric_cols = df_extended.select_dtypes(include=[np.number]).columns.tolist()
 
 # Colonnes à exclure (tu peux les remplir toi-même si besoin)
-exclude_cols = []
+exclude_cols = ["player_id", "id","journée"]
 
 # Statistiques proposées = toutes les numériques sauf exclusions
 stat_cols = [c for c in numeric_cols if c not in exclude_cols]
