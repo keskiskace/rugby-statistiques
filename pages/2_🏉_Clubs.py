@@ -154,12 +154,8 @@ if not selected_clubs_df.empty:
         radar_df = pd.DataFrame(radar_data)
 
         # Radar
-        def make_scatter_radar(radar_df: pd.DataFrame, selected_stats: list, mode="normalize"):
-            import plotly.graph_objects as go
-            import numpy as np
-            import pandas as pd
-
-    fig = go.Figure()
+        fig = make_scatter_radar(radar_df, selected_stats)
+        st.plotly_chart(fig, use_container_width=True, config={"scrollZoom": True, "displaylogo": False})
 
         # Tableau comparatif
         st.subheader("📊 Tableau comparatif des clubs")
