@@ -189,12 +189,12 @@ def make_scatter_radar(radar_df: pd.DataFrame, selected_stats: list):
         color = color_palette[idx % len(color_palette)]
         label = row.get("Club") or row.get("Joueur") or f"Série {idx+1}"
 
-    # Seulement les lignes (pas de remplissage)
-    fig.add_trace(go.Scatter(
-        x=x, y=y, mode="lines",
-        line=dict(color=color),
-        showlegend=False, hoverinfo="skip"
-    ))
+        # Seulement les lignes (pas de remplissage)
+        fig.add_trace(go.Scatter(
+            x=x, y=y, mode="lines",
+            line=dict(color=color),
+            showlegend=False, hoverinfo="skip"
+        ))
 
 
         # Courbe avec légende + hover
@@ -218,6 +218,7 @@ def make_scatter_radar(radar_df: pd.DataFrame, selected_stats: list):
                       yaxis=dict(showgrid=False, zeroline=False, visible=False),
                       showlegend=True)
     return fig
+
 
 
 
