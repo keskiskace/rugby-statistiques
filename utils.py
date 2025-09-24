@@ -128,7 +128,7 @@ def compute_extra_players(df_nonzero: pd.DataFrame) -> pd.DataFrame:
                 extra_players.append({"nom": nom_type, "club": "Poste moyen", **avg_stats.to_dict()})
     return pd.DataFrame(extra_players) if extra_players else pd.DataFrame()
 
-def make_scatter_radar(radar_df: pd.DataFrame, selected_stats: list):
+def make_scatter_radar(radar_df: pd.DataFrame, selected_stats: list, mode="normalize"):
     import plotly.graph_objects as go
     import numpy as np
     import pandas as pd
@@ -136,10 +136,24 @@ def make_scatter_radar(radar_df: pd.DataFrame, selected_stats: list):
     fig = go.Figure()
     n_stats = len(selected_stats)
     if n_stats == 0:
-        return fig
+        return fig, pd.DataFrame()
 
+    # --- Normalisation des valeurs ---
+    data = radar_df.copy()
+    if mode == "normalize":
+        for col in selected_stats:
+            vals = pd.to_numeric(data[col], errors="coerce")
+            minv, maxv = vals.min(), vals.max()
+            if pd.notna(minv) and pd.notna(maxv) and maxv > minv:
+                data[col] = 100 * (vals - minv) / (maxv - minv)
+    elif mode == "log":
+        for col in selected_stats:
+            vals = pd.to_numeric(data[col], errors="coerce")
+            data[col] = np.log1p(vals)  # log(1+x)
+
+    # --- Paramètres radar ---
     angles = np.linspace(0, 2 * np.pi, n_stats, endpoint=False)
-    max_val = radar_df[selected_stats].apply(pd.to_numeric, errors="coerce").max().max()
+    max_val = data[selected_stats].apply(pd.to_numeric, errors="coerce").max().max()
     if not np.isfinite(max_val) or max_val <= 0:
         max_val = 1.0
 
@@ -151,7 +165,7 @@ def make_scatter_radar(radar_df: pd.DataFrame, selected_stats: list):
         "#bcbd22", "#17becf", "#393b79", "#637939"
     ]
 
-    # cercles
+    # --- Cercles concentriques ---
     for i in range(1, n_circles + 1):
         r = step * i
         circle_x = [r * np.cos(t) for t in np.linspace(0, 2 * np.pi, 200)]
@@ -162,7 +176,7 @@ def make_scatter_radar(radar_df: pd.DataFrame, selected_stats: list):
         fig.add_annotation(x=r, y=0, text=str(round(r, 1)), showarrow=False,
                            font=dict(size=10, color="grey"))
 
-    # axes & labels
+    # --- Axes & labels ---
     for angle, stat in zip(angles, selected_stats):
         x_axis = [0, max_val * np.cos(angle)]
         y_axis = [0, max_val * np.sin(angle)]
@@ -174,8 +188,10 @@ def make_scatter_radar(radar_df: pd.DataFrame, selected_stats: list):
                            text=stat, showarrow=False,
                            font=dict(size=12, color="black"))
 
-    # polygones par joueur/club
-    for idx, (_, row) in enumerate(radar_df.iterrows()):
+    # --- Polygones & surfaces ---
+    surfaces = []
+
+    for idx, (_, row) in enumerate(data.iterrows()):
         r_values = [row.get(stat, np.nan) for stat in selected_stats]
         r_values = [np.nan if (not pd.notna(v)) else float(v) for v in r_values]
         r_values += [r_values[0]]
@@ -189,15 +205,14 @@ def make_scatter_radar(radar_df: pd.DataFrame, selected_stats: list):
         color = color_palette[idx % len(color_palette)]
         label = row.get("Club") or row.get("Joueur") or f"Série {idx+1}"
 
-        # Seulement les lignes (pas de remplissage)
+        # Tracé lignes
         fig.add_trace(go.Scatter(
             x=x, y=y, mode="lines",
             line=dict(color=color),
             showlegend=False, hoverinfo="skip"
         ))
 
-
-        # Courbe avec légende + hover
+        # Légende + hover
         hover_texts = [
             f"{label}<br>{stat}: "
             f"{'' if (val is np.nan or not np.isfinite(val)) else round(val,1)}"
@@ -206,18 +221,27 @@ def make_scatter_radar(radar_df: pd.DataFrame, selected_stats: list):
         hover_texts.append(hover_texts[0])
 
         fig.add_trace(go.Scatter(x=x, y=y, mode="markers+lines",
-                                 name=label,  # ✅ affiché dans la légende
+                                 name=label,
                                  line=dict(color=color),
                                  marker=dict(color=color, size=6),
                                  text=hover_texts,
                                  hovertemplate="%{text}<extra></extra>"))
+
+        # --- Aire du polygone (shoelace formula) ---
+        area = 0.5 * abs(sum(x[i] * y[i+1] - x[i+1] * y[i] for i in range(len(x)-1)))
+        surfaces.append({"Club": label, "Surface": area})
 
     fig.update_layout(width=800, height=600, hovermode="closest",
                       dragmode="pan",
                       xaxis=dict(showgrid=False, zeroline=False, visible=False),
                       yaxis=dict(showgrid=False, zeroline=False, visible=False),
                       showlegend=True)
-    return fig
+
+    ranking_df = pd.DataFrame(surfaces).sort_values("Surface", ascending=False).reset_index(drop=True)
+
+    return fig, ranking_df
+
+
 
 
 
