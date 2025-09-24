@@ -219,6 +219,37 @@ def make_scatter_radar(radar_df: pd.DataFrame, selected_stats: list):
                       showlegend=True)
     return fig
 
+def compute_composite_ranking(df: pd.DataFrame, entity_col: str, stats: list, lower_is_better: list = None) -> pd.DataFrame:
+    """
+    Calcule un classement composite basé sur plusieurs statistiques.
+    - df : DataFrame avec une colonne identifiant les entités (ex: 'Joueur' ou 'Club')
+    - entity_col : nom de la colonne (par ex. 'Joueur' ou 'Club')
+    - stats : liste des colonnes statistiques à utiliser
+    - lower_is_better : liste des stats où une valeur plus petite est meilleure (ex: 'cartons_rouges')
 
+    Retourne un DataFrame trié avec :
+    - rangs individuels par stat
+    - Moyenne_rang
+    - Classement_final
+    """
+    if lower_is_better is None:
+        lower_is_better = []
 
+    ranking_df = df.set_index(entity_col)[stats].copy()
 
+    # Créer DataFrame pour les rangs
+    ranks = pd.DataFrame(index=ranking_df.index)
+    for stat in stats:
+        asc = True if stat in lower_is_better else True
+        ranks[stat] = ranking_df[stat].rank(ascending=not asc, method="min")
+
+    # Moyenne des rangs
+    ranks["Moyenne_rang"] = ranks.mean(axis=1)
+
+    # Classement final
+    ranks["Classement_final"] = ranks["Moyenne_rang"].rank(ascending=True, method="min")
+
+    # Tri final et reset index
+    classement = ranks.sort_values("Classement_final").reset_index()
+
+    return classement
