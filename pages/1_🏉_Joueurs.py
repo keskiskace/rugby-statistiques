@@ -190,7 +190,7 @@ if selected_stats and not selected_players.empty:
     st.plotly_chart(fig, use_container_width=True, config={"scrollZoom": True, "displaylogo": False})
 
     st.subheader("📊 Tableau comparatif")
-    table_df = radar_df.set_index("Joueur").T
+    table_df = radar_df.set_index("Joueur")
     st.dataframe(table_df)
 
     st.download_button("⬇️ Télécharger CSV", table_df.to_csv().encode("utf-8"), file_name="comparatif_joueurs.csv", mime="text/csv")
