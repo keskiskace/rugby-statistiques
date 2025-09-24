@@ -13,7 +13,10 @@ Utilise le menu de gauche pour naviguer entre les pages :
 - 🔝 Top 10 / Flop 10 **joueurs**
 - 🔝 Top 10 / Flop 10 **clubs**
 
+
+Les données sont extraites des sites lnr.fr et allrugby.com
 ---
 """)
 
 st.info("👉 Choisis une section dans le menu de gauche pour commencer.")
+
