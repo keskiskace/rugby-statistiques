@@ -3,6 +3,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 from utils import load_players, compute_extra_players, get_image_safe, download_missing_photos, make_scatter_radar, dataframe_to_image
+from utils import compute_composite_ranking
 
 st.set_page_config(page_title="Comparateur Joueurs", layout="wide")
 st.title("🏉 Comparateur — Joueurs (Top14 / ProD2)")
@@ -26,7 +27,7 @@ extra_df = compute_extra_players(df_nonzero)
 def reset_players_filters():
     keys = [
         'players_saisons', 'players_divisions', 'players_clubs',
-        'players_postes', 'players_names', 'players_types', 'players_stats'
+        'players_postes', 'players_names', 'players_types', 'players_stats', "temps_jeu_min"
     ]
     for k in keys:
         if k in st.session_state:
@@ -55,24 +56,13 @@ if 'saison' in df_players.columns and len(selected_saisons) > 1:
 else:
     df_players['display_name'] = df_players['nom'].astype(str)
 
-# 2) Filtre journée (optionnel)
-if "journée" in df.columns:
-    journees_dispo = sorted(df.loc[df['saison'].isin(selected_saisons), "journée"].dropna().unique().tolist())
-    choice_journee = st.selectbox("5) Choisir une journée", ["Dernière disponible"] + [f"J{j}" for j in journees_dispo])
+# 2) Filtre journée (supprimé)
+# On applique directement la logique "dernière journée"
+if "journée" in df_players.columns:
+    df_players = df_players.loc[
+        df_players.groupby(["saison", "nom"])["journée"].transform("max") == df_players["journée"]
+    ]
 
-    if choice_journee == "Dernière disponible":
-        # garder uniquement la dernière journée par saison+joueur
-        df_players = df_players.loc[
-            df_players.groupby(["saison", "nom"])["journée"].transform("max") == df_players["journée"]
-        ]
-    else:
-        journee_num = int(choice_journee[1:])
-        df_players = df_players[
-            ((df_players["saison"].isin(selected_saisons)) & (df_players["journée"] == journee_num))
-            | ((~df_players["saison"].isin(selected_saisons)) & (
-                df_players.groupby(["saison", "nom"])["journée"].transform("max") == df_players["journée"]
-            ))
-        ]
 
 # 3) division
 if "division" in df_players.columns:
@@ -94,6 +84,13 @@ if "poste" in df_players.columns:
     selected_postes = st.multiselect("4) Choisir poste(s) (optionnel)", postes_dispo, default=st.session_state.get('players_postes', []), key='players_postes')
     if selected_postes:
         df_players = df_players[df_players['poste'].isin(selected_postes)]
+
+# Temps de jeu minimum (nouveau filtre)
+min_temps_options = [0, 10, 20, 30, 40, 50, 60, 70, 80]
+min_temps = st.selectbox("Filtrer par temps de jeu minimum (minutes)", min_temps_options, index=0)
+
+if "temps_jeu_min" in df_players.columns:
+    df_players = df_players[df_players["temps_jeu_min"] >= min_temps]
 
 # 6) joueurs disponibles (aucune sélection par défaut)
 player_options = df_players['display_name'].sort_values().unique().tolist()
@@ -151,6 +148,9 @@ if not selected_players.empty:
             url = joueur.get("url", None)
             if url and isinstance(url, str) and url.startswith("http"):
                 st.link_button("🔗 Voir fiche LNR", url)
+            url2 = joueur.get("url_allrugby", None)
+            if url2 and isinstance(url2, str) and url2.startswith("http"):
+                st.link_button("🔗 Voir fiche ALLRUGBY", url2)
 
         else:
             st.info("📊 Joueur type (moyenne des stats).")
@@ -190,7 +190,7 @@ if selected_stats and not selected_players.empty:
     st.plotly_chart(fig, use_container_width=True, config={"scrollZoom": True, "displaylogo": False})
 
     st.subheader("📊 Tableau comparatif")
-    table_df = radar_df.set_index("Joueur")
+    table_df = radar_df.set_index("Joueur").T
     st.dataframe(table_df)
 
     st.download_button("⬇️ Télécharger CSV", table_df.to_csv().encode("utf-8"), file_name="comparatif_joueurs.csv", mime="text/csv")
@@ -198,6 +198,18 @@ if selected_stats and not selected_players.empty:
     img_file = dataframe_to_image(table_df, "comparatif_joueurs.png")
     with open(img_file, "rb") as f:
         st.download_button("⬇️ Télécharger PNG", f, file_name="comparatif_joueurs.png", mime="image/png")
+
+    # ====== Classement composite ======
+    try:
+        classement_df = compute_composite_ranking(radar_df, entity_col="Joueur", stats=selected_stats)
+        st.subheader("🏆 Classement composite des joueurs")
+        # afficher la colonne entité, les stats choisies, la moyenne et le classement final
+        cols_show = ["Joueur"] + selected_stats + ["Moyenne_rang", "Classement_final"]
+        # sécurité : ne garder que les colonnes réellement présentes
+        cols_show = [c for c in cols_show if c in classement_df.columns]
+        st.dataframe(classement_df[cols_show])
+    except Exception as e:
+        st.error(f"Erreur lors du calcul du classement composite : {e}")
+
 else:
     st.info("Sélectionne au moins une statistique ET un joueur pour afficher le radar.")
-

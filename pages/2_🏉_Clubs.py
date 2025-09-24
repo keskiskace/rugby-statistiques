@@ -3,6 +3,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 from utils import load_clubs, dataframe_to_image, make_scatter_radar
+from utils import compute_composite_ranking
 
 st.set_page_config(page_title="Comparateur Clubs", layout="wide")
 st.title("🏉 Comparateur — Clubs (Top14 / ProD2)")
@@ -170,6 +171,27 @@ if not selected_clubs_df.empty:
         img_file = dataframe_to_image(table_df, "comparatif_clubs.png")
         with open(img_file, "rb") as f:
             st.download_button("⬇️ Télécharger en PNG", f, file_name="comparatif_clubs.png", mime="image/png")
+            
+        # ====== Classement composite ======
+        try:
+            classement_df = compute_composite_ranking(radar_df, entity_col="Club", stats=selected_stats)
+            st.subheader("🏆 Classement composite des clubs")
+            # afficher la colonne entité, les stats choisies, la moyenne et le classement final
+            cols_show = ["Club"] + selected_stats + ["Moyenne_rang", "Classement_final"]
+            # sécurité : ne garder que les colonnes réellement présentes
+            cols_show = [c for c in cols_show if c in classement_df.columns]
+            st.dataframe(classement_df[cols_show])
+        except Exception as e:
+            st.error(f"Erreur lors du calcul du classement composite : {e}")
+
+        # Téléchargements
+        st.download_button("⬇️ Télécharger en CSV", classement_df.to_csv().encode("utf-8"),
+                           file_name="classement_clubs.csv", mime="text/csv")
+
+        img_file = dataframe_to_image(classement_df, "comparatif_clubs.png")
+        with open(img_file, "rb") as f:
+            st.download_button("⬇️ Télécharger en PNG", f, file_name="classement_clubs.png", mime="image/png")
+            
     else:
         st.info("Sélectionne au moins une statistique pour afficher le radar.")
 else:
