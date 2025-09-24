@@ -160,7 +160,7 @@ if not selected_clubs_df.empty:
         # Tableau comparatif
         st.subheader("📊 Tableau comparatif des clubs")
         # transposer pour avoir colonnes = clubs (labels uniques)
-        table_df = radar_df.set_index("Club").T
+        table_df = radar_df.set_index("Club")
         st.dataframe(table_df)
 
         # Téléchargements
