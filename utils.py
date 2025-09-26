@@ -233,7 +233,7 @@ def compute_composite_ranking(df: pd.DataFrame, entity_col: str, stats: list, lo
     - Classement_final
     """
     if lower_is_better is None:
-        lower_is_better = []
+        lower_is_better = ["pts_encaissés", "essais_encaissés", "pénalités_encaissées", "pénalités_concédées", "cartons_jaunes", "cartons_oranges", "cartons_rouges"]
 
     ranking_df = df.set_index(entity_col)[stats].copy()
 
@@ -253,3 +253,43 @@ def compute_composite_ranking(df: pd.DataFrame, entity_col: str, stats: list, lo
     classement = ranks.sort_values("Classement_final").reset_index()
 
     return classement
+
+def compute_club_defense(players_df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Calcule le % moyen de plaquages réussis par club à partir de la table players.
+    - Identifie les joueurs par 'player_id' (ou 'nom' si absent).
+    - Ne garde que la ligne correspondant à la dernière 'journée' par joueur+saison.
+    - Filtre les joueurs avec nb_match > 0.
+    - Retourne la moyenne de 'pct_plaquages' par club+saison.
+    """
+
+    if players_df is None or players_df.empty:
+        return pd.DataFrame()
+
+    df = players_df.copy()
+
+    # --- identifiant joueur
+    id_col = "player_id" if "player_id" in df.columns else "nom"
+
+    # --- conversions utiles
+    df["journée"] = pd.to_numeric(df["journée"], errors="coerce")
+    df["nb_match"] = pd.to_numeric(df["nb_match"], errors="coerce").fillna(0)
+    df["pct_plaquages"] = pd.to_numeric(df["pct_plaquages"], errors="coerce")
+
+    # --- garder uniquement les joueurs ayant joué au moins 1 match
+    df = df[df["nb_match"] > 0]
+
+    # --- récupérer la dernière journée par joueur+saison
+    df_sorted = df.sort_values(by=["saison", id_col, "journée"])
+    last_per_player = df_sorted.groupby(["saison", id_col], as_index=False).last()
+
+    # --- calcul moyenne par club+saison
+    club_avg = (
+        last_per_player.groupby(["club", "saison"], as_index=False)["pct_plaquages"]
+        .mean()
+        .rename(columns={"pct_plaquages": "pct_plaquage_moyen"})
+    )
+
+    return club_avg
+
+
