@@ -51,7 +51,7 @@ def _load_image_from_path_or_url(path_or_url):
 
 
 def render_compo(background_img, selections, players_df, output="compo.png",
-                 photo_size=(135, 160), max_name_len=22, name_font_size=14):
+                 photo_size=(135, 160), max_name_len=22, name_font_size=16):
     """
     Dessine la compo sur le terrain avec photos + nom sous chaque vignette.
     - selections : dict {poste: player_id} (player_id peut être int ou str)
@@ -135,7 +135,7 @@ def render_compo(background_img, selections, players_df, output="compo.png",
         # si le texte dépasse l'image en bas, on le remonte
         if ty + th > img.height:
             ty = img.height - th - 4
-        draw.text((tx, ty), short_name, fill="black", font=font)
+        draw.text((tx, ty), short_name, fill="red", font=font)
 
     # convertir en RGB si besoin et sauvegarder
     if img.mode != "RGB":
@@ -189,3 +189,4 @@ def compute_compo_stats(selections, players_df):
 
     # Conversion en DataFrame avec arrondi
     return pd.DataFrame([stats]).round(2).reset_index(drop=True)
+
