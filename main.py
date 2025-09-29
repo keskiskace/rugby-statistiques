@@ -12,13 +12,10 @@ Utilise le menu de gauche pour naviguer entre les pages :
 - 📊 Comparateur de **clubs**
 - 🔝 Top 10 / Flop 10 **joueurs**
 - 🔝 Top 10 / Flop 10 **clubs**
-
+- 🏉 **Composition d'équipe**
 
 ---
 """)
 
 st.info("👉 Choisis une section dans le menu de gauche pour commencer.")
 st.info("👉 Les données sont extraites des sites lnr.fr et allrugby.com.")
-
-
-
