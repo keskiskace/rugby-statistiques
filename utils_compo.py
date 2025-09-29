@@ -51,7 +51,7 @@ def _load_image_from_path_or_url(path_or_url):
 
 
 def render_compo(background_img, selections, players_df, output="compo.png",
-                 photo_size=(135, 160), max_name_len=22, name_font_size=16):
+                 photo_size=(135, 160), max_name_len=22, name_font_size=18):
     """
     Dessine la compo sur le terrain avec photos + nom sous chaque vignette.
     - selections : dict {poste: player_id} (player_id peut être int ou str)
@@ -189,4 +189,5 @@ def compute_compo_stats(selections, players_df):
 
     # Conversion en DataFrame avec arrondi
     return pd.DataFrame([stats]).round(2).reset_index(drop=True)
+
 
