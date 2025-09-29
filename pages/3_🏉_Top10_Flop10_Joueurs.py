@@ -26,6 +26,32 @@ choice_division = st.selectbox("Choisir une division", ["Toutes"] + divisions_di
 if choice_division != "Toutes":
     df_filtered = df_filtered[df_filtered['division'] == choice_division]
 
+# --- garder uniquement la dernière journée PAR DIVISION ---
+if "journée" in df_filtered.columns:
+    # garantir une valeur pour 'division' pour le groupby
+    if 'division' not in df_filtered.columns:
+        df_filtered['division'] = 'Unknown'
+    else:
+        df_filtered['division'] = df_filtered['division'].fillna('Unknown')
+
+    # tenter d'extraire un numéro de journée (ex: "J4", "j5", "4")
+    jour_str = df_filtered['journée'].astype(str)
+    jour_num = jour_str.str.extract(r'(\d+)')[0]
+
+    if jour_num.notna().any():
+        # si on a des numéros, on filtre en utilisant la valeur numérique (plus robuste)
+        df_filtered['journee_num'] = pd.to_numeric(jour_num, errors='coerce')
+        df_filtered = df_filtered[
+            df_filtered.groupby('division')['journee_num'].transform('max') == df_filtered['journee_num']
+        ]
+        df_filtered = df_filtered.drop(columns=['journee_num'])
+    else:
+        # sinon fallback : on compare la valeur brute (lexicographique)
+        df_filtered = df_filtered[
+            df_filtered.groupby('division')['journée'].transform('max') == df_filtered['journée']
+        ]
+# --- fin ---
+
 # Club (optionnel)
 clubs_dispo = sorted(df_filtered['club'].dropna().unique())
 choice_club = st.selectbox("Choisir un club (optionnel)", ["Aucun"] + clubs_dispo)
