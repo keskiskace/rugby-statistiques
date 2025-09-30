@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 from utils import load_clubs, dataframe_to_image, make_scatter_radar
 from utils import compute_composite_ranking
+from utils import load_clubs, load_players, compute_club_defense
 
 st.set_page_config(page_title="Comparateur Clubs", layout="wide")
 st.title("🏉 Comparateur — Clubs (Top14 / ProD2)")
@@ -13,6 +14,17 @@ clubs_df = load_clubs()
 if clubs_df is None or clubs_df.empty:
     st.warning("Aucune donnée clubs trouvée dans la DB.")
     st.stop()
+
+# Charger aussi les joueurs
+players_df = load_players()
+
+
+# calculer moyenne des % plaquages réussis par club
+club_def = compute_club_defense(players_df)
+
+# merge sur club+saison
+if not club_def.empty:
+    clubs_df = clubs_df.merge(club_def, on=["club", "saison"], how="left")
 
 # ====== fonction reset ======
 def reset_clubs_filters():

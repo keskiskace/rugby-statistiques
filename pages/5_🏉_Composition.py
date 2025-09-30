@@ -249,10 +249,63 @@ if st.button("📸 Générer la compo"):
         else:
             players_for_render = players_df.copy()
 
-        # rendre la compo et calculer stats
+                # rendre la compo et calculer stats
         img = render_compo(background, selections, players_for_render)
         st.image(img, caption="Composition générée", use_container_width=True)
 
+        # 📥 Bouton téléchargement compo en PNG
+        import io
+        buf_img = io.BytesIO()
+        img.save(buf_img, format="PNG")
+        buf_img.seek(0)
+        st.download_button(
+            label="⬇️ Télécharger la compo (PNG)",
+            data=buf_img,
+            file_name="composition.png",
+            mime="image/png"
+        )
+
+        # --- Statistiques ---
         st.subheader("📊 Statistiques moyennes (dernière journée dispo par joueur)")
         stats = compute_compo_stats(selections, players_for_render)
         st.dataframe(stats)
+
+                # 📥 Bouton téléchargement tableau en PNG
+        import matplotlib.pyplot as plt
+        import math
+
+        max_cols = 6  # nombre max de colonnes par sous-table
+        n_blocks = math.ceil(len(stats.columns) / max_cols)
+
+        fig_height = 1.5 * len(stats) * n_blocks  # ajuste hauteur
+        fig, axes = plt.subplots(n_blocks, 1, figsize=(12, fig_height))
+        if n_blocks == 1:
+            axes = [axes]  # uniformiser
+
+        for i in range(n_blocks):
+            start = i * max_cols
+            end = min((i + 1) * max_cols, len(stats.columns))
+            sub_df = stats.iloc[:, start:end]
+
+            ax = axes[i]
+            ax.axis("off")
+            table = ax.table(
+                cellText=sub_df.values,
+                colLabels=sub_df.columns,
+                cellLoc="center",
+                loc="center"
+            )
+            table.auto_set_font_size(False)
+            table.set_fontsize(9)
+            table.scale(1.2, 1.2)
+
+        buf_table = io.BytesIO()
+        plt.savefig(buf_table, format="png", bbox_inches="tight", dpi=150)
+        buf_table.seek(0)
+
+        st.download_button(
+            label="⬇️ Télécharger le tableau (PNG)",
+            data=buf_table,
+            file_name="stats.png",
+            mime="image/png"
+        )
