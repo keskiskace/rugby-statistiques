@@ -233,14 +233,14 @@ def compute_composite_ranking(df: pd.DataFrame, entity_col: str, stats: list, lo
     - Classement_final
     """
     if lower_is_better is None:
-        lower_is_better = ["pts_encaissés", "essais_encaissés", "pénalités_encaissées", "pénalités_concédées", "cartons_jaunes", "cartons_oranges", "cartons_rouges"]
+        lower_is_better = ["british", "classement", "pts_encaissés", "essais_encaissés", "pénalités_encaissées", "pénalités_concédées", "cartons_jaunes", "cartons_oranges", "cartons_rouges"]
 
     ranking_df = df.set_index(entity_col)[stats].copy()
 
     # Créer DataFrame pour les rangs
     ranks = pd.DataFrame(index=ranking_df.index)
     for stat in stats:
-        asc = True if stat in lower_is_better else True
+        asc = False if stat in lower_is_better else True
         ranks[stat] = ranking_df[stat].rank(ascending=not asc, method="min")
 
     # Moyenne des rangs

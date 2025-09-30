@@ -3,6 +3,10 @@ import pandas as pd
 import requests
 from io import BytesIO
 import textwrap
+import io
+import streamlit as st
+import matplotlib.pyplot as plt
+
 
 def get_positions(image_size=(1200, 1800)):
     width, height = image_size
@@ -51,25 +55,19 @@ def _load_image_from_path_or_url(path_or_url):
 
 
 def render_compo(background_img, selections, players_df, output="compo.png",
-                 photo_size=(135, 160), max_name_len=22, name_font_size=18):
+                 photo_size=(135, 160), max_name_len=22, name_font_size=15):
     """
     Dessine la compo sur le terrain avec photos + nom sous chaque vignette.
-    - selections : dict {poste: player_id} (player_id peut être int ou str)
-    - players_df : DataFrame contenant au moins 'player_id', 'nom', 'photo' (les colonnes peuvent être d'un type différent)
-    Renvoie le PIL.Image (et sauvegarde sur output).
     """
-    # copie et travail en RGBA pour gérer alpha lors du collage
     img = background_img.copy().convert("RGBA")
     draw = ImageDraw.Draw(img)
     positions = get_positions(img.size)
 
-    # police
     try:
         font = ImageFont.truetype("arial.ttf", name_font_size)
     except Exception:
         font = ImageFont.load_default()
 
-    # Normaliser player_id en string pour comparer
     if "player_id" in players_df.columns:
         players_df = players_df.copy()
         players_df["player_id_str"] = players_df["player_id"].astype(str)
@@ -77,80 +75,57 @@ def render_compo(background_img, selections, players_df, output="compo.png",
     for poste, player_id in selections.items():
         px, py = positions.get(poste, (None, None))
         if px is None:
-            # position inconnue -> sauter
             continue
 
         pid_str = str(player_id)
-
-        # recherche robuste du joueur
         player_rows = players_df[players_df["player_id_str"] == pid_str] if "player_id_str" in players_df.columns else players_df[players_df["player_id"] == player_id]
+
         if not player_rows.empty:
             player = player_rows.iloc[0]
             name = str(player.get("nom", "") or "")
             photo_path = player.get("photo", None)
         else:
-            # joueur introuvable dans players_df (ex: id absent) -> fallback
-            player = None
             name = f"Inconnu ({pid_str})"
             photo_path = None
 
-        # charger l'image
         face = _load_image_from_path_or_url(photo_path) if photo_path else None
         if face is not None:
-            # redimensionner
             face = face.resize(photo_size, Image.LANCZOS)
             x0 = int(px - face.width / 2)
             y0 = int(py - face.height / 2)
-            # coller avec masque si alpha
             try:
                 img.paste(face, (x0, y0), face)
             except Exception:
-                # fallback sans masque
                 img.paste(face.convert("RGB"), (x0, y0))
         else:
-            # dessiner placeholder rond
-            # taille approximative en fonction photo_size
             w, h = photo_size
             r = max(w, h) // 2
             x0 = int(px - r)
             y0 = int(py - r)
             draw.ellipse((x0, y0, x0 + 2*r, y0 + 2*r), fill="#DDDDDD", outline="black")
-            # petit texte 'Photo manquante' centré
-            missing = "photo\nmanquante"
-            # on ne dessine pas trop long, juste les initiales? on dessine pas pour garder lisibilité
 
-        # afficher le nom centré sous la photo
         short_name = textwrap.shorten(name, width=max_name_len, placeholder="…")
-        # mesurer texte
         bbox = draw.textbbox((0, 0), short_name, font=font)
         tw = bbox[2] - bbox[0]
         th = bbox[3] - bbox[1]
-        # position du texte : sous la photo (y0 + hauteur + marge)
+
         try:
             photo_h = face.height if face is not None else (r * 2)
         except Exception:
             photo_h = photo_size[1]
+
         tx = int(px - tw / 2)
         ty = int(y0 + photo_h + 6)
-        # si le texte dépasse l'image en bas, on le remonte
         if ty + th > img.height:
             ty = img.height - th - 4
-        draw.text((tx, ty), short_name, fill="red", font=font)
+        draw.text((tx, ty), short_name, fill="black", font=font)
 
-    # convertir en RGB si besoin et sauvegarder
-    if img.mode != "RGB":
-        out_img = img.convert("RGB")
-    else:
-        out_img = img
+    out_img = img.convert("RGB")
     out_img.save(output)
     return out_img
 
 
 def compute_compo_stats(selections, players_df):
-    """
-    Calcule les statistiques de la compo (23 joueurs).
-    Renvoie un DataFrame avec labels explicites.
-    """
     ids = list(selections.values())
     sub_df = players_df[players_df["player_id"].isin(ids)].copy()
 
@@ -158,16 +133,12 @@ def compute_compo_stats(selections, players_df):
         return pd.DataFrame()
 
     stats = {}
-
-    
     stats["Nb JIFF"] = (sub_df["jiff"].str.lower() == "jiff").sum()
     stats["Moy âge"] = sub_df["age"].mean()
     stats["Moy poids"] = sub_df["poids_kg"].mean()
-    # --- Pack titulaire (postes 1 à 8) ---
     pack_ids = [selections.get(i) for i in range(1, 9)]
     pack_df = players_df[players_df["player_id"].isin(pack_ids)]
     stats["Poids pack titulaire"] = pack_df["poids_kg"].sum()
-    
     stats["Max taille"] = sub_df["taille_cm"].max()
     stats["Tot nb titulaires"] = sub_df["nb_titulaire"].sum()
     stats["Tot minutes de jeu"] = sub_df["temps_jeu_min"].sum()
@@ -176,7 +147,7 @@ def compute_compo_stats(selections, players_df):
     stats["Moy % pénalités"] = sub_df.loc[sub_df["pct_pénalités"] > 0, "pct_pénalités"].mean()
     stats["Moy % transformations"] = sub_df.loc[sub_df["pct_transformations"] > 0, "pct_transformations"].mean()
     stats["Tot drops réussis"] = sub_df["drop_réussis"].sum()
-    stats["Moy % plaquages"] = sub_df["pct_plaquages"].mean()    
+    stats["Moy % plaquages"] = sub_df["pct_plaquages"].mean()
     stats["Tot franchissements"] = sub_df["franchissements"].sum()
     stats["Tot offloads"] = sub_df["offloads"].sum()
     stats["Tot plaquages cassés"] = sub_df["plaquages_cassés"].sum()
@@ -187,7 +158,37 @@ def compute_compo_stats(selections, players_df):
     stats["Nb cart oranges"] = sub_df["cartons_oranges"].sum()
     stats["Nb cart rouges"] = sub_df["cartons_rouges"].sum()
 
-    # Conversion en DataFrame avec arrondi
     return pd.DataFrame([stats]).round(2).reset_index(drop=True)
 
 
+# 🔽 AJOUT : fonction pour transformer un DataFrame en PNG
+def df_to_image(df):
+    fig, ax = plt.subplots(figsize=(10, 2))
+    ax.axis("off")
+    tbl = ax.table(cellText=df.values, colLabels=df.columns, loc="center", cellLoc="center")
+    tbl.auto_set_font_size(False)
+    tbl.set_fontsize(10)
+    tbl.scale(1.2, 1.5)
+    buf = io.BytesIO()
+    plt.savefig(buf, format="png", bbox_inches="tight", dpi=150)
+    plt.close(fig)
+    buf.seek(0)
+    return buf
+
+
+# 🔽 AJOUT : exemples d’utilisation dans ton app Streamlit
+def show_compo_and_stats(background_img, selections, players_df):
+    img = render_compo(background_img, selections, players_df)
+
+    st.image(img, caption="Composition", use_column_width=True)
+
+    buf_img = io.BytesIO()
+    img.save(buf_img, format="PNG")
+    buf_img.seek(0)
+    st.download_button("📥 Télécharger la compo en PNG", data=buf_img, file_name="composition.png", mime="image/png")
+
+    stats_df = compute_compo_stats(selections, players_df)
+    if not stats_df.empty:
+        st.dataframe(stats_df)
+        stats_png = df_to_image(stats_df)
+        st.download_button("📥 Télécharger les stats en PNG", data=stats_png, file_name="stats_compo.png", mime="image/png")
