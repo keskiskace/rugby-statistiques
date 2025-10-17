@@ -146,7 +146,6 @@ def compute_compo_stats(selections, players_df):
     stats["Tot essais"] = sub_df["essais"].sum()
     stats["Moy % pénalités"] = sub_df.loc[sub_df["pct_pénalités"] > 0, "pct_pénalités"].mean()
     stats["Moy % transformations"] = sub_df.loc[sub_df["pct_transformations"] > 0, "pct_transformations"].mean()
-    stats["Tot drops réussis"] = sub_df["drop_réussis"].sum()
     stats["Moy % plaquages"] = sub_df["pct_plaquages"].mean()
     stats["Tot franchissements"] = sub_df["franchissements"].sum()
     stats["Tot offloads"] = sub_df["offloads"].sum()
@@ -192,3 +191,4 @@ def show_compo_and_stats(background_img, selections, players_df):
         st.dataframe(stats_df)
         stats_png = df_to_image(stats_df)
         st.download_button("📥 Télécharger les stats en PNG", data=stats_png, file_name="stats_compo.png", mime="image/png")
+
