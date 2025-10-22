@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 from utils import load_players, compute_extra_players, get_image_safe, download_missing_photos, make_scatter_radar, dataframe_to_image
 from utils import compute_composite_ranking
+from utils import format_short_name
 
 st.set_page_config(page_title="Comparateur Joueurs", layout="wide")
 st.title("🏉 Comparateur — Joueurs (Top14 / ProD2)")
@@ -50,11 +51,17 @@ if selected_saisons:
 else:
     df_players = df.copy()
 
+# === Appliquer la version abrégée du nom pour l'affichage ===
+if "nom" in df_players.columns:
+    df_players["short_name"] = df_players["nom"].apply(format_short_name)
+else:
+    df_players["short_name"] = df_players.get("nom", "")
+
 # prepare display_name
 if 'saison' in df_players.columns and len(selected_saisons) > 1:
-    df_players['display_name'] = df_players['nom'].astype(str) + " (" + df_players['saison'].astype(str) + ")"
+    df_players['display_name'] = df_players['short_name'] + " (" + df_players['saison'].astype(str) + ")"
 else:
-    df_players['display_name'] = df_players['nom'].astype(str)
+    df_players['display_name'] = df_players['short_name']
 
 # 2) Filtre journée (supprimé)
 # On applique directement la logique "dernière journée"
