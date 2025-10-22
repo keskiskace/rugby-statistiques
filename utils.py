@@ -320,6 +320,32 @@ def compute_club_defense(players_df: pd.DataFrame) -> pd.DataFrame:
 
     return club_avg
 
+def format_short_name(full_name: str) -> str:
+    """
+    Abrège les noms pour affichage dans les tableaux/radars :
+    - "Romain Ntamack" -> "R Ntamack"
+    - "Antoine Dupont" -> "A Dupont"
+    - "Brandon Julio Tiute NANSEN" -> "BJT NANSEN"
+    """
+    if not isinstance(full_name, str) or not full_name.strip():
+        return full_name
+
+    parts = full_name.strip().split()
+    if len(parts) == 1:
+        return parts[0]  # ex: juste "Ntamack"
+
+    # Détecte si un nom de famille est écrit en majuscules (ex: "NANSEN")
+    last_part = parts[-1]
+    if last_part.isupper():
+        # On considère tout ce qui précède comme prénoms
+        initials = "".join([p[0].upper() for p in parts[:-1] if p])
+        return f"{initials} {last_part}"
+
+    # Cas normal : "Prénom Nom" ou "Prénom composé Nom"
+    first = parts[0]
+    last = parts[-1]
+    return f"{first[0].upper()} {last.capitalize()}"
+
 
 
 
