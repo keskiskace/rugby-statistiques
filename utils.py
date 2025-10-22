@@ -33,12 +33,34 @@ def load_players(db_file: str = DB_FILE) -> pd.DataFrame:
         df['ratio_min_matchs'] = (
             pd.to_numeric(df['temps_jeu_min'], errors='coerce') / pd.to_numeric(df['nombre_matchs_joues'], errors='coerce')
         ).replace([np.inf, -np.inf], np.nan).round(2)
-    # === Ratios normalisés pour mise à égalité ===
-    if "points" in df.columns and "temps_jeu_min" in df.columns:
-        df["ratio_points_40min"] = (
-            pd.to_numeric(df["points"], errors="coerce") /
-            pd.to_numeric(df["temps_jeu_min"], errors="coerce") * 40
-        ).replace([np.inf, -np.inf], np.nan).round(2)    
+    # === Ratios normalisés pour mise à égalité (80 min) ===
+    if "temps_jeu_min" in df.columns:
+        stats_80min = [
+            "points",
+            "essais",
+            "joués_au_pied",
+            "mêtres_au_pied",
+            "courses",
+            "mêtres_parcourus",
+            "passes",
+            "franchissements",
+            "offloads",
+            "plaquages_cassés",
+            "plaquages_réussis",
+            "ballons_grattés",
+            "interceptions",
+            "pénalités_concédées",
+            "cartons_jaunes",
+            "cartons_oranges",
+            "cartons_rouges",
+        ]
+
+        for stat in stats_80min:
+            if stat in df.columns:
+                df[f"ratio_{stat}_80min"] = (
+                    pd.to_numeric(df[stat], errors="coerce") /
+                    pd.to_numeric(df["temps_jeu_min"], errors="coerce") * 80
+                ).replace([np.inf, -np.inf], np.nan).round(2)
     return df
 
 def load_clubs(db_file: str = DB_FILE) -> pd.DataFrame:
@@ -297,6 +319,7 @@ def compute_club_defense(players_df: pd.DataFrame) -> pd.DataFrame:
     )
 
     return club_avg
+
 
 
 
