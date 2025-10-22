@@ -187,7 +187,9 @@ selected_stats = st.multiselect(
 if selected_stats and not selected_players.empty:
     radar_data = []
     for _, joueur in selected_players.iterrows():
-        entry = {"Joueur": joueur.get('nom', '')}
+        # Utilise le nom abrégé si disponible, sinon le nom complet
+        short_nom = joueur.get("short_name") or joueur.get("nom", "")
+        entry = {"Joueur": short_nom}
         for stat in selected_stats:
             entry[stat] = joueur.get(stat, np.nan)
         radar_data.append(entry)
