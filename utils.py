@@ -36,7 +36,7 @@ def load_players(db_file: str = DB_FILE) -> pd.DataFrame:
     # === Ratios normalisés pour mise à égalité ===
     if "points_marques" in df.columns and "temps_jeu_min" in df.columns:
         df["ratio_points_40min"] = (
-            pd.to_numeric(df["points_marques"], errors="coerce") /
+            pd.to_numeric(df["points"], errors="coerce") /
             pd.to_numeric(df["temps_jeu_min"], errors="coerce") * 40
         ).replace([np.inf, -np.inf], np.nan).round(2)    
     return df
@@ -297,5 +297,6 @@ def compute_club_defense(players_df: pd.DataFrame) -> pd.DataFrame:
     )
 
     return club_avg
+
 
 
