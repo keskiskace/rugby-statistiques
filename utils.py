@@ -261,7 +261,7 @@ def compute_composite_ranking(df: pd.DataFrame, entity_col: str, stats: list, lo
     - Classement_final
     """
     if lower_is_better is None:
-        lower_is_better = ["british", "classement", "pts_encaissés", "essais_encaissés", "pénalités_encaissées", "pénalités_concédées", "cartons_jaunes", "cartons_oranges", "cartons_rouges", "ratio_pénalités_concédées", "ratio_cartons_jaunes", "ratio_cartons_oranges", "ratio_cartons_rouges"]
+        lower_is_better = ["british", "classement", "pts_encaissés", "essais_encaissés", "pénalités_encaissées", "pénalités_concédées", "cartons_jaunes", "cartons_oranges", "cartons_rouges", "ratio_pénalités_concédées_80min", "ratio_cartons_jaunes_80min", "ratio_cartons_oranges_80min", "ratio_cartons_rouges_80min"]
 
     ranking_df = df.set_index(entity_col)[stats].copy()
 
