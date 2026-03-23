@@ -217,6 +217,20 @@ if selected_stats and not selected_players.empty:
         # sécurité : ne garder que les colonnes réellement présentes
         cols_show = [c for c in cols_show if c in classement_df.columns]
         st.dataframe(classement_df[cols_show])
+# --- AJOUT DES BOUTONS ICI ---
+        col_c1, col_c2 = st.columns(2)
+        with col_c1:
+            st.download_button(
+                "⬇️ CSV Classement", 
+                classement_df[cols_show].to_csv(index=False).encode("utf-8"), 
+                file_name="classement_composite.csv", 
+                mime="text/csv"
+            )
+        with col_c2:
+            img_class_file = dataframe_to_image(classement_df[cols_show], "classement_joueurs.png")
+            with open(img_class_file, "rb") as f:
+                st.download_button("⬇️ PNG Classement", f, file_name="classement_joueurs.png", mime="image/png")
+        # -----------------------------
     except Exception as e:
         st.error(f"Erreur lors du calcul du classement composite : {e}")
 
