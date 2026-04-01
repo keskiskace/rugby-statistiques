@@ -93,7 +93,7 @@ if "poste" in df_players.columns:
         df_players = df_players[df_players['poste'].isin(selected_postes)]
 
 # Temps de jeu minimum (nouveau filtre)
-min_temps_options = [0, 10, 20, 30, 40, 50, 60, 70, 80]
+min_temps_options = [0, 10, 20, 30, 40, 50, 60, 70, 80, 160]
 min_temps = st.selectbox("Filtrer par temps de jeu minimum (minutes)", min_temps_options, index=0)
 
 if "temps_jeu_min" in df_players.columns:
